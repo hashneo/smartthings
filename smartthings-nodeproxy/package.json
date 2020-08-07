@@ -13,8 +13,10 @@
   },
   "main": "server.js",
   "dependencies": {
+    "bent": "^7.1.2",
     "express": "^4.13.4",
     "nconf": "^0.8.4",
+    "serialport": "^8.0.7",
     "split": "^1.0.0"
   },
   "scripts": {

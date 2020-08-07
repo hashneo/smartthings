@@ -1,4 +1,7 @@
 {
+  "plugins": [
+    "avail_plugins/ad2usb.js"
+  ],
   // SmartThings Node Proxy (required)
   "port": 8080,                   // STNP service port
   "authCode": "secret-key",       // Set the auth code to access STNP
@@ -114,8 +117,8 @@
   }
 
   // SmartThings Hub (optional - will be set by SmartThings SmartApp)
-  "notify": {
+  "notify": [ {
     "address": "192.168.1.12",    // SmartThings Hub IP
     "port": "39500"               // SmartThings Hub HTTP NOTIFY port - default is 39500
-  }
+  } ]
 }

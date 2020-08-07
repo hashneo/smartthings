@@ -1,0 +1,13 @@
+node_modules
+.DS_Store
+.dockerignore
+Dockerfile
+Dockerfile.*
+circle.yml
+Jenkinsfile
+.git*
+.circle*
+README*
+data/config.json
+.idea
+kube.yml

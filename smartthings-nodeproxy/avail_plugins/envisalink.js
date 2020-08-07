@@ -24,7 +24,7 @@ var express = require('express');
 var net = require('net');
 var app = express();
 var nconf = require('nconf');
-nconf.file({ file: './config.json' });
+nconf.file({ file: './data/config.json' });
 var notify;
 var logger = function(str) {
   mod = 'evl3';

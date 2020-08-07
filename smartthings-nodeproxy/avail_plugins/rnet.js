@@ -29,7 +29,7 @@ var express = require('express');
 var serialport = require("serialport");
 var app = express();
 var nconf = require('nconf');
-nconf.file({ file: './config.json' });
+nconf.file({ file: './data/config.json' });
 var notify;
 var logger = function(str) {
   mod = 'rnet';

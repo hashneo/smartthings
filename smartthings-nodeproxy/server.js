@@ -16,111 +16,141 @@
 ////////////////////
 // DO NOT CHANGE BELOW THIS LINE
 ////////////////////
-var express = require('express');
-var http = require('http');
-var app = express();
-var nconf = require('nconf');
-nconf.file({ file: './config.json' });
-var logger = function(str) {
-  mod = 'stnp';
-  console.log("[%s] [%s] %s", new Date().toISOString(), mod, str);
-}
+let express = require('express');
+let http = require('http');
+let app = express();
+let nconf = require('nconf');
+let path = require('path');
+const bent = require('bent');
+
+nconf.file({file: './data/config.json'});
+
+let logger = function (str) {
+    mod = 'stnp';
+    console.log("[%s] [%s] %s", new Date().toISOString(), mod, str);
+};
 
 /**
  * Root route
  */
 app.get('/', function (req, res) {
-  res.status(200).json({ status: 'SmartThings Node Proxy running' });
+    res.status(200).json({status: 'SmartThings Node Proxy running'});
 });
 
 /**
  * Enforce basic authentication route; verify that HTTP.HEADERS['stnp-auth'] == CONFIG['authCode']
  */
-app.use(function (req, res, next) {
-  logger(req.ip+' '+req.method+' '+req.url);
+app.use( (req, res, next) => {
 
-  var headers = req.headers;
-  if (!headers['stnp-auth'] ||
-    headers['stnp-auth'] != nconf.get('authCode')) {
-    logger('Authentication error');
-    res.status(500).json({ error: 'Authentication error' });
-    return;
-  }
+    logger(req.ip + ' ' + req.method + ' ' + req.url);
 
-  next();
+    let headers = req.headers;
+    if (!headers['stnp-auth'] ||
+        headers['stnp-auth'] !== nconf.get('authCode')) {
+        logger('Authentication error');
+        res.status(500).json({error: 'Authentication error'});
+        return;
+    }
+
+    next();
 });
 
 /**
  * Subscribe route used by SmartThings Hub to register for callback/notifications and write to config.json
  * @param {String} host - The SmartThings Hub IP address and port number
  */
-app.get('/subscribe/:host', function (req, res) {
-  var parts = req.params.host.split(":");
-  nconf.set('notify:address', parts[0]);
-  nconf.set('notify:port', parts[1]);
-  nconf.save(function (err) {
-    if (err) {
-      logger('Configuration error: '+err.message);
-      res.status(500).json({ error: 'Configuration error: '+err.message });
-      return;
+app.get('/subscribe/:host', (req, res) => {
+    let parts = req.params.host.split(":");
+
+    let notify = nconf.get('notify');
+
+    if (!notify)
+        notify = [];
+
+    const found = notify.find(element => element.address === parts[0]);
+
+    if (!found){
+
+        notify.push({
+            address: parts[0],
+            port:parts[1]
+        });
+
+        nconf.save( (err) => {
+            if (err) {
+                logger('Configuration error: ' + err.message);
+                res.status(500).json({error: 'Configuration error: ' + err.message});
+            }
+        });
     }
-  });
-  res.end();
+
+    res.end();
 });
 
 /**
  * Startup
  */
-var server = app.listen(nconf.get('port') || 8080, function () {
-  logger('SmartThings Node Proxy listening at http://'+server.address().address+':'+server.address().port);
+let server = app.listen(nconf.get('port') || 8080, () => {
+    logger('SmartThings Node Proxy listening at http://' + server.address().address + ':' + server.address().port);
 });
 
 /**
  * Load all plugins
  */
-var fs = require('fs');
-fs.readdir('./plugins', function(err, files) {
-  if (!err) {
-    files
-    .filter(function(file) { return file.substr(-3) === '.js'; })
-    .forEach(function(file) {
-      var plugin = file.split(".")[0];
-      app.use('/plugins/'+plugin, require('./plugins/'+plugin)(function(data){notify(plugin,data);}));
-      logger('Loaded plugin: '+plugin);
-    });
-  } else {
-    logger(err);
-  }
-});
+let plugins = nconf.get('plugins');
+
+if (plugins) {
+    plugins
+        .forEach(function (file) {
+            let _p = path.parse(file);
+            let plugin = _p.name;
+            app.use('/plugins/' + plugin, require('./' + file)(function (data) {
+                notify(plugin, data);
+            }));
+            logger('Loaded plugin: ' + plugin);
+        });
+}
+
 
 /**
  * Callback to the SmartThings Hub via HTTP NOTIFY
  * @param {String} plugin - The name of the STNP plugin
  * @param {String} data - The HTTP message body
  */
-var notify = function(plugin, data) {
-  if (!nconf.get('notify:address') || nconf.get('notify:address').length == 0 ||
-    !nconf.get('notify:port') || nconf.get('notify:port') == 0) {
-    logger("Notify server address and port not set!");
-    return;
-  }
+let notify = function (plugin, data) {
 
-  var opts = {
-    method: 'NOTIFY',
-    host: nconf.get('notify:address'),
-    port: nconf.get('notify:port'),
-    path: '/notify',
-    headers: {
-      'CONTENT-TYPE': 'application/json',
-      'CONTENT-LENGTH': Buffer.byteLength(data),
-      'stnp-plugin': plugin
-    }
-  };
+    let notify = nconf.get('notify');
 
-  var req = http.request(opts);
-  req.on('error', function(err, req, res) {
-    logger("Notify error: "+err);
-  });
-  req.write(data);
-  req.end();
-}
+    if (!notify)
+        notify = [];
+
+    notify.forEach( ( endPoint ) => {
+
+        if (!endPoint.address || endPoint.address.length === 0 || !endPoint.port || endPoint.port === 0) {
+            logger('Notify server address and port not set!');
+            return;
+        }
+
+        const _notify = bent('NOTIFY', 200);
+
+        let url = `http://${endPoint.address}:${endPoint.port}/notify`;
+
+        let headers = {
+            'content-type': 'application/json',
+            'connection': 'close',
+            'stnp-plugin': plugin
+        };
+
+        _notify(url, data, headers)
+            .then((res) => {
+                if (res.statusCode === 200) {
+                    logger(`Info: Endpoint ${endPoint.address} notified`);
+                }else{
+                    logger(`Info: Endpoint ${endPoint.address} notification failed`);
+                }
+            })
+            .catch((err) => {
+                logger('Notify error: ' + err);
+            });
+    });
+};

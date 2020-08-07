@@ -1,0 +1,71 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: smartthings-nodeproxy
+spec:
+  type: LoadBalancer
+  ports:
+  - name: http
+    port: 8080
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: nodeproxy
+    context: smartthings
+    version: v1
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: smartthings-nodeproxy-data-claim
+spec:
+  accessModes:
+  - ReadWriteOnce
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: smartthings-nodeproxy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nodeproxy
+  template:
+    metadata:
+      labels:
+        app: nodeproxy
+        context: smartthings
+        version: v1
+    spec:
+      containers:
+      -
+        name: app
+        image: docker.io/hashneo/smartthings-nodeproxy-x86_64:latest
+        imagePullPolicy: Always
+        env:
+        - name: NEW_RELIC_NO_CONFIG_FILE
+          value: "true"
+        - name: NEW_RELIC_ENABLED
+          value: "true"
+        - name: NEW_RELIC_APP_NAME
+          value: "Smartthings NodeProxy"
+        - name: NEW_RELIC_LICENSE_KEY
+          value: ""
+        volumeMounts:
+        - name:  data-volume
+          mountPath: /src/data/
+        ports:
+        -
+          containerPort: 5000
+          protocol: TCP
+      volumes:
+      - name: data-volume
+        persistentVolumeClaim:
+          claimName: smartthings-nodeproxy-data-claim
+      nodeSelector:
+        beta.kubernetes.io/arch: amd64

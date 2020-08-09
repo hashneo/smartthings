@@ -135,6 +135,7 @@ function AD2USB () {
     var self = this;
     var device = null;
     var parser = null;
+    var firstLoad = true;
     var mode = nconf.get('ad2usb:mode') || 'serial';
     var serialPorts = [];
     var panel = {alpha: '', timer: [], partition: 1, zones: []};
@@ -408,9 +409,10 @@ function AD2USB () {
         // ZONE UPDATE
         //////////
 
-        // all zones are closed
-        if (msg.dscCode === 'READY') {
+        // all zones are closed or on first load set all to closed/cleared
+        if (msg.dscCode === 'READY' || firstLoad) {
             panel.timer = [];
+            firstLoad = false;
             for (var n in panel.zones){
                 if (panel.zones[n] !== 'closed') {
                     // notify

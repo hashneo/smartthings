@@ -6,7 +6,6 @@ orbs:
 jobs:
   build:
     machine: true
-    working_directory: smartthings-nodeproxy
     steps:
 
     - checkout
@@ -21,6 +20,7 @@ jobs:
 
     # build the application image
     - run:
+        working_directory: smartthings-nodeproxy
         docker build -t $DOCKER_ORG/$PROJECT_NAME-x86_64:$CIRCLE_SHA1 -t $DOCKER_ORG/$PROJECT_NAME-x86_64:latest . -f Dockerfile
 
     # deploy the image

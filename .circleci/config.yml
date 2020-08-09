@@ -33,3 +33,4 @@ workflows:
     jobs:
     - build:
         context: global
+        working_directory: smartthings-nodeproxy

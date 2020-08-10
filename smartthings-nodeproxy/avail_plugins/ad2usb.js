@@ -436,6 +436,7 @@ function AD2USB () {
                 panel.timer[msg.userOrZone]++;
 
                 // experimental: close all zones that have not updated after three ticks
+                /*
                 if (panel.timer[msg.userOrZone] === 2) {
                     for (var n in panel.timer) {
                         if (panel.timer[n] === 0) {
@@ -450,6 +451,8 @@ function AD2USB () {
                         }
                     }
                 }
+
+                 */
             }
         }
 

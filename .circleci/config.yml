@@ -1,15 +1,13 @@
 version: 2.1
 
-orbs:
-  kube-orb: circleci/kubernetes@0.11.0
-
 jobs:
   build:
-    machine: true
+    docker:
+    - image: jdrouet/docker-with-buildx:stable
     steps:
-
     - checkout
-
+    - setup_remote_docker:
+        version: 18.09.3
     - run:
         name: Update Environment Variables at Runtime
         command: |
@@ -22,7 +20,9 @@ jobs:
     - run:
         working_directory: smartthings-nodeproxy
         command: |
-          docker build -t $DOCKER_ORG/$PROJECT_NAME-x86_64:$CIRCLE_SHA1 -t $DOCKER_ORG/$PROJECT_NAME-x86_64:latest . -f Dockerfile
+          docker buildx build \
+                    --platform linux/arm/v7,linux/arm64/v8,linux/amd64 \
+                    --tag $DOCKER_ORG/$PROJECT_NAME:latest . -f Dockerfile
 
     # deploy the image
     - run: |

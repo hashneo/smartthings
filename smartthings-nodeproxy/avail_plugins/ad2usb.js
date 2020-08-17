@@ -334,7 +334,7 @@ function AD2USB () {
         // Section 2: 80
         msg.flags = parseInt(map[2], 16);
 
-        if (msg.flags === RFX_FLAG.LOOP1) {
+        if ( ((msg.flags & RFX_FLAG.LOOP1) === RFX_FLAG.LOOP1) && ( (msg.flags & 0x0F) === 0 ) ) {
             // reset timer when new zone added
             panel.timer[msg.userOrZone] = 0;
             for (var n in panel.timer) {
